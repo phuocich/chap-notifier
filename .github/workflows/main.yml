@@ -59,10 +59,3 @@ jobs:
           key: chapter-log-${{ github.run_id }}
           restore-keys: |
             chapter-log
-
-      # Optional: Keep a copy in artifacts for manual review
-      - name: Upload chapter log artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: chapter-log
-          path: ~/.config/chap_notifier/chapter_log.txt
