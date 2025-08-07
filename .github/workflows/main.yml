@@ -17,13 +17,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.x'
 
-      - name: Install Playwright Browsers
-        run: dotnet build && pwsh bin/Debug/net8.0/playwright.ps1 install chromium
+      - name: Build and install Playwright
+        run: |
+          dotnet build
+          pwsh bin/Debug/net8.0/playwright.ps1 install chromium
 
       - name: Run notifier
         run: dotnet run
