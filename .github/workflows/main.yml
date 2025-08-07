@@ -2,7 +2,7 @@ name: Chap Notifier
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/5 * * * *'  # Run every 5 minutes
   workflow_dispatch:
 
 jobs:
@@ -15,27 +15,52 @@ jobs:
       TARGET_URL: ${{ secrets.TARGET_URL }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout master branch
+        uses: actions/checkout@v4
+        with:
+          ref: master
 
+      # ✅ Cache Playwright browsers
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-chromium
 
+      # ✅ Restore chapter_log.txt from cache
+      - name: Restore chapter log cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.config/chap_notifier/chapter_log.txt
+          key: chapter-log
+          restore-keys: |
+            chapter-log
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.x'
 
+      # ✅ Build and install Playwright
       - name: Build and install Playwright
         run: |
           dotnet build
           pwsh bin/Debug/net8.0/playwright.ps1 install chromium
 
+      # ✅ Run notifier (will read & update chapter_log.txt)
       - name: Run notifier
         run: dotnet run
 
+      # ✅ Save updated chapter_log.txt to cache
+      - name: Save chapter log cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.config/chap_notifier/chapter_log.txt
+          key: chapter-log-${{ github.run_id }}
+          restore-keys: |
+            chapter-log
+
+      # Optional: Keep a copy in artifacts for manual review
       - name: Upload chapter log artifact
         uses: actions/upload-artifact@v4
         with:
