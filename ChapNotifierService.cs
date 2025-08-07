@@ -41,6 +41,7 @@ public class ChapNotifierService : BackgroundService
             try
             {
                 await CheckNewChapters();
+                Environment.Exit(0);
             }
             catch (Exception ex)
             {
