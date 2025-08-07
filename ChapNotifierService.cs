@@ -60,7 +60,11 @@ public class ChapNotifierService : BackgroundService
         });
 
         var page = await browser.NewPageAsync();
-        await page.GotoAsync(_config.TargetUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        await page.GotoAsync(_config.TargetUrl, new PageGotoOptions
+        {
+            WaitUntil = WaitUntilState.Load,
+            Timeout = 60000
+        });
         return await page.ContentAsync();
     }
 
