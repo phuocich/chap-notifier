@@ -59,7 +59,14 @@ public class ChapNotifierService : BackgroundService
             Headless = true
         });
 
-        var page = await browser.NewPageAsync();
+        // ✅ Set user agent here
+        var context = await browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+        });
+
+        var page = await context.NewPageAsync();
+
         await page.GotoAsync(_config.TargetUrl, new PageGotoOptions
         {
             WaitUntil = WaitUntilState.Load,
