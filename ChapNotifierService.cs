@@ -5,6 +5,7 @@ using HtmlAgilityPack;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Playwright;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 
@@ -14,7 +15,7 @@ public class ChapNotifierService : BackgroundService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ChapNotifierConfig _config;
 
-    private readonly string ChapterLogFile = "chapter_log.txt";
+    private readonly string ChapterLogFile;
 
     public ChapNotifierService(
         ILogger<ChapNotifierService> logger, 
@@ -24,6 +25,13 @@ public class ChapNotifierService : BackgroundService
         _logger = logger;
         _httpClientFactory = httpClientFactory;
         _config = config.Value;
+
+        //Use a consistent path to store logs(survive GitHub Actions runs)
+        ChapterLogFile = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".config", "chap_notifier", "chapter_log.txt");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(ChapterLogFile)!);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,7 +40,7 @@ public class ChapNotifierService : BackgroundService
         {
             try
             {
-                await CheckNewChapter();
+                await CheckNewChapters();
             }
             catch (Exception ex)
             {
@@ -43,15 +51,26 @@ public class ChapNotifierService : BackgroundService
         }
     }
 
-    private async Task CheckNewChapter()
+    private async Task<string> GetHtmlWithPlaywright()
     {
-        var httpClient = _httpClientFactory.CreateClient();
-        var html = await httpClient.GetStringAsync(_config.TargetUrl);
+        using var playwright = await Playwright.CreateAsync();
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+        {
+            Headless = true
+        });
 
-        var htmlDoc = new HtmlAgilityPack.HtmlDocument();
+        var page = await browser.NewPageAsync();
+        await page.GotoAsync(_config.TargetUrl, new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+        return await page.ContentAsync();
+    }
+
+    private async Task CheckNewChapters()
+    {
+        var html = await GetHtmlWithPlaywright();
+
+        var htmlDoc = new HtmlDocument();
         htmlDoc.LoadHtml(html);
 
-        // Get top 10 chapter nodes
         var chapterNodes = htmlDoc.DocumentNode
             .SelectNodes("//a[contains(@class, 'text-muted')]//span[contains(@class, 'chapter-title')]")
             ?.Take(10)
@@ -63,7 +82,6 @@ public class ChapNotifierService : BackgroundService
             return;
         }
 
-        // Load already notified URLs
         var notifiedUrls = File.Exists(ChapterLogFile)
             ? new HashSet<string>(File.ReadAllLines(ChapterLogFile))
             : new HashSet<string>();
@@ -95,7 +113,7 @@ public class ChapNotifierService : BackgroundService
             return;
         }
 
-        foreach (var chap in newChapters.OrderBy(c => c.url)) // notify in order
+        foreach (var chap in newChapters.OrderBy(c => c.url))
         {
             await SendTelegram($"😲 Có chap mới rồi nè!\n📚 {chap.title}\n🔗 {chap.url}");
             File.AppendAllText(ChapterLogFile, chap.url + Environment.NewLine);
