@@ -38,9 +38,13 @@ jobs:
         run: dotnet run
 
       - name: Commit and push updated chapter_log.txt
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add chapter_log.txt
           git diff --cached --quiet || git commit -m "Update chapter_log.txt [skip ci]"
-          git push
+          git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
+          git push origin HEAD:master
+
