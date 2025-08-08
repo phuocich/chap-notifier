@@ -28,7 +28,7 @@ jobs:
           path: ~/.config/chap_notifier
         continue-on-error: true  # Avoid failure if first run
       - name: List Files
-        run: ls -R
+        run: ls -R ~/.config/chap_notifier
 
       # ✅ Cache Playwright browsers (optional optimization)
       - name: Cache Playwright browsers
