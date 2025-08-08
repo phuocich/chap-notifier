@@ -119,7 +119,7 @@ public class ChapNotifierService : BackgroundService
 
         foreach (var chap in newChapters.OrderBy(c => c.url))
         {
-            await SendTelegram($"😲 Có chap mới rồi nè!\n📚 {chap.title}\n🔗 {chap.url}");
+            await SendTelegram($"⭐️ Có chap mới rồi nè!\n📚 {chap.title}\n🔗 {chap.url}");
             File.AppendAllText(ChapterLogFile, chap.url + Environment.NewLine);
             _logger.LogInformation("Notified chapter: {0}", chap.title);
         }
