@@ -20,49 +20,40 @@ jobs:
         with:
           ref: master
 
-      # Create folder for artifact download to avoid path errors
-      - name: Prepare folder for artifact
-        run: mkdir -p $HOME/.config/chap_notifier
-
-      # Download previous chapter_log.txt artifact if exists
+      # ✅ Download previous chapter_log.txt artifact if exists
       - name: Download previous log
         uses: actions/download-artifact@v4
         with:
           name: chapter-log
-          path: $HOME/.config/chap_notifier
-        continue-on-error: true  # Avoid failure if first run or no artifact
+          path: ~/.config/chap_notifier
+        continue-on-error: true  # Avoid failure if first run
 
-      # List files to verify artifact was downloaded (debug)
-      - name: List downloaded files
-        run: ls -l $HOME/.config/chap_notifier
-
-      # Cache Playwright browsers (optional optimization)
+      # ✅ Cache Playwright browsers (optional optimization)
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-chromium
 
-      # Setup .NET SDK
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.x'
 
-      # Build and install Playwright browsers
+      # ✅ Build and install Playwright
       - name: Build and install Playwright
         run: |
           dotnet build
           pwsh bin/Debug/net8.0/playwright.ps1 install chromium
 
-      # Run notifier app
+      # ✅ Run notifier
       - name: Run notifier
         run: dotnet run
 
-      # Upload updated chapter_log.txt as artifact
+      # ✅ Upload updated chapter_log.txt as artifact
       - name: Upload updated log
         uses: actions/upload-artifact@v4
         with:
           name: chapter-log
-          path: $HOME/.config/chap_notifier/chapter_log.txt
+          path: ~/.config/chap_notifier/chapter_log.txt
           overwrite: true
