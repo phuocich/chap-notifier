@@ -20,19 +20,29 @@ jobs:
         with:
           ref: master
 
-      # Ensure chapter_log.json is downloaded
+      # Create directory for chapter_log.json
+      - name: Create chapter log directory
+        run: mkdir -p ~/.config/chap_notifier
+
+      # Download previous chapter log
       - name: Download previous chapter log
         uses: actions/download-artifact@v4
         with:
           name: chapter-log
           path: ~/.config/chap_notifier
-        continue-on-error: true  # Avoid failure if no artifact exists
+        continue-on-error: true  # Allow first run without artifact
 
       # Verify downloaded file
       - name: Verify chapter log
         run: |
-          ls -l ~/.config/chap_notifier/
-          cat ~/.config/chap_notifier/chapter_log.json || echo "No chapter_log.json found"
+          echo "Listing contents of ~/.config/chap_notifier/"
+          ls -l ~/.config/chap_notifier/ || echo "Directory is empty or does not exist"
+          if [ -f ~/.config/chap_notifier/chapter_log.json ]; then
+            echo "Contents of chapter_log.json:"
+            cat ~/.config/chap_notifier/chapter_log.json
+          else
+            echo "No chapter_log.json found"
+          fi
 
       # Cache Playwright browsers
       - name: Cache Playwright browsers
@@ -54,7 +64,7 @@ jobs:
       - name: Run notifier
         run: dotnet run
 
-      # Verify and upload updated chapter_log.json
+      # Upload updated chapter log
       - name: Upload updated chapter log
         uses: actions/upload-artifact@v4
         with:
