@@ -20,21 +20,20 @@ jobs:
         with:
           ref: master
 
-      # ✅ Cache Playwright browsers
+      # ✅ Download previous chapter_log.txt artifact if exists
+      - name: Download previous log
+        uses: actions/download-artifact@v4
+        with:
+          name: chapter-log
+          path: ~/.config/chap_notifier
+        continue-on-error: true  # Avoid failure if first run
+
+      # ✅ Cache Playwright browsers (optional optimization)
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-chromium
-
-      # ✅ Restore chapter_log.txt from cache
-      - name: Restore chapter log cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.config/chap_notifier/chapter_log.txt
-          key: chapter-log
-          restore-keys: |
-            chapter-log
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -47,15 +46,14 @@ jobs:
           dotnet build
           pwsh bin/Debug/net8.0/playwright.ps1 install chromium
 
-      # ✅ Run notifier (will read & update chapter_log.txt)
+      # ✅ Run notifier
       - name: Run notifier
         run: dotnet run
 
-      # ✅ Save updated chapter_log.txt to cache
-      - name: Save chapter log cache
-        uses: actions/cache@v4
+      # ✅ Upload updated chapter_log.txt as artifact
+      - name: Upload updated log
+        uses: actions/upload-artifact@v4
         with:
+          name: chapter-log
           path: ~/.config/chap_notifier/chapter_log.txt
-          key: chapter-log-${{ github.run_id }}
-          restore-keys: |
-            chapter-log
+          overwrite: true
