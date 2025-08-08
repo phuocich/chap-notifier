@@ -2,7 +2,7 @@ name: Chap Notifier
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # Run every 5 minutes
+    - cron: '*/5 * * * *'  # Every 5 minutes
   workflow_dispatch:
 
 jobs:
@@ -15,26 +15,9 @@ jobs:
       TARGET_URL: ${{ secrets.TARGET_URL }}
 
     steps:
-      - name: Checkout master branch
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: master
 
-      # Ensure chapter_log.json is downloaded
-      - name: Download previous chapter log
-        uses: actions/download-artifact@v4
-        with:
-          name: chapter-log
-          path: ~/.config/chap_notifier
-        continue-on-error: true  # Avoid failure if no artifact exists
-
-      # Verify downloaded file
-      - name: Verify chapter log
-        run: |
-          ls -l ~/.config/chap_notifier/
-          cat ~/.config/chap_notifier/chapter_log.json || echo "No chapter_log.json found"
-
-      # Cache Playwright browsers
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
@@ -54,10 +37,10 @@ jobs:
       - name: Run notifier
         run: dotnet run
 
-      # Verify and upload updated chapter_log.json
-      - name: Upload updated chapter log
-        uses: actions/upload-artifact@v4
-        with:
-          name: chapter-log
-          path: ~/.config/chap_notifier/chapter_log.json
-          overwrite: true
+      - name: Commit and push updated chapter_log.txt
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add chapter_log.txt
+          git diff --cached --quiet || git commit -m "Update chapter_log.txt [skip ci]"
+          git push
