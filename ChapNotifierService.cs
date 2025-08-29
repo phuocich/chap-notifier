@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Playwright;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 
 public class ChapNotifierService : BackgroundService
 {
@@ -117,7 +118,7 @@ public class ChapNotifierService : BackgroundService
         }
 
         // ✅ Notify for each new chapter found
-        foreach (var chap in newChapters)
+        foreach (var chap in newChapters.OrderBy(c => ExtractChapterId(c.url)))
         {
             var msg = $"⭐️ Có chap mới rồi nè!\n📚 {chap.number}: {chap.title}\n🔗 {chap.url}";
             await SendTelegram(msg);
@@ -128,7 +129,11 @@ public class ChapNotifierService : BackgroundService
         }
     }
 
-
+    private int ExtractChapterId(string url)
+    {
+        var match = Regex.Match(url, @"/(\d+)-");
+        return match.Success ? int.Parse(match.Groups[1].Value) : -1;
+    }
 
     private async Task SendTelegram(string message)
     {
