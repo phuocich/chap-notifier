@@ -76,39 +76,40 @@ public class ChapNotifierService : BackgroundService
         var htmlDoc = new HtmlDocument();
         htmlDoc.LoadHtml(html);
 
-        // ✅ Get all <a> links inside each chapter card
-        var anchorNodes = htmlDoc.DocumentNode
-            .SelectNodes("//div[contains(@class,'chapter-card-desktop')]/a[contains(@class,'chapter-link-desktop')]")
-            ?.Take(15) // only take the latest few chapters
+        var chapterNodes = htmlDoc.DocumentNode
+            .SelectNodes("//a[contains(@class, 'text-muted')]//span[contains(@class, 'chapter-title')]")
+            ?.Take(20)
             .ToList();
 
-        if (anchorNodes == null || anchorNodes.Count == 0)
+        if (chapterNodes == null || chapterNodes.Count == 0)
         {
             _logger.LogWarning("No chapter titles found.");
             return;
         }
 
-        // ✅ Read already notified chapter URLs from log file
         var notifiedUrls = File.Exists(ChapterLogFile)
             ? new HashSet<string>(File.ReadAllLines(ChapterLogFile))
             : new HashSet<string>();
 
-        var newChapters = new List<(string title, string url, string number)>();
+        var newChapters = new List<(string title, string url)>();
 
-        foreach (var a in anchorNodes)
+        foreach (var chapterNode in chapterNodes)
         {
-            var url = a.GetAttributeValue("href", "").Trim();
+            var aNode = chapterNode.Ancestors("a").FirstOrDefault();
+            if (aNode == null) continue;
+
+            var url = aNode.GetAttributeValue("href", "").Trim();
             if (string.IsNullOrEmpty(url) || notifiedUrls.Contains(url)) continue;
 
-            // ✅ Extract chapter title and number from HTML
-            var titleNode = a.SelectSingleNode(".//div[contains(@class,'chapter-title')]");
-            var numberNode = a.SelectSingleNode(".//div[contains(@class,'chapter-number')]");
-            var title = HtmlEntity.DeEntitize(titleNode?.InnerText?.Trim() ?? "");
-            var number = HtmlEntity.DeEntitize(numberNode?.InnerText?.Trim() ?? "");
+            var title = HtmlEntity.DeEntitize(
+                chapterNode.ChildNodes
+                    .Where(n => n.NodeType == HtmlNodeType.Text)
+                    .Select(n => n.InnerText)
+                    .Aggregate("", (acc, val) => acc + val)
+                    .Trim()
+            );
 
-            if (string.IsNullOrWhiteSpace(title)) continue;
-
-            newChapters.Add((title, url, number));
+            newChapters.Add((title, url));
         }
 
         if (newChapters.Count == 0)
@@ -117,19 +118,15 @@ public class ChapNotifierService : BackgroundService
             return;
         }
 
-        // ✅ Notify for each new chapter found
         foreach (var chap in newChapters.OrderBy(c => ExtractChapterId(c.url)))
         {
-            var msg = $"⭐️ Có chap mới rồi nè!\n📚 {chap.number}: {chap.title}\n🔗 {chap.url}";
-            await SendTelegram(msg);
-
-            // ✅ Save URL to log file to avoid duplicate notifications
+            await SendTelegram($"⭐️ Có chap mới rồi nè!\n📚 {chap.title}\n🔗 {chap.url}");
             File.AppendAllText(ChapterLogFile, chap.url + Environment.NewLine);
             _logger.LogInformation("Notified chapter: {0}", chap.title);
         }
     }
 
-    private int ExtractChapterId(string url)
+    private static int ExtractChapterId(string url)
     {
         var match = Regex.Match(url, @"/(\d+)-");
         return match.Success ? int.Parse(match.Groups[1].Value) : -1;
