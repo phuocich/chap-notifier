@@ -1,49 +1,50 @@
-name: Chap Notifier
-
-on:
-  schedule:
-    - cron: '*/20 * * * *'  # Every 20 minutes
-  workflow_dispatch:
-jobs:
-  notify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 2 # Auto-cancel if running more than 2 minutes
-    env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      TARGET_URL: ${{ secrets.TARGET_URL }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Cache Playwright browsers
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-chromium
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.x'
-
-      - name: Build and install Playwright
-        run: |
-          dotnet build
-          pwsh bin/Debug/net8.0/playwright.ps1 install chromium
-
-      - name: Run notifier
-        run: dotnet run
-
-      - name: Commit and push updated chapter_log.txt
-        env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add chapter_log.txt
-          git diff --cached --quiet || git commit -m "Update chapter_log.txt [skip ci]"
-          git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
-          git push origin HEAD:master
-
+# name: Chap Notifier
+#
+# on:
+#   schedule:
+#     - cron: '*/20 * * * *'  # Every 20 minutes
+#   workflow_dispatch:
+#
+# jobs:
+#   notify:
+#     runs-on: ubuntu-latest
+#     timeout-minutes: 2 # Auto-cancel if running more than 2 minutes
+#
+#     env:
+#       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+#       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+#       TARGET_URL: ${{ secrets.TARGET_URL }}
+#
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+#
+#       - name: Cache Playwright browsers
+#         uses: actions/cache@v4
+#         with:
+#           path: ~/.cache/ms-playwright
+#           key: playwright-${{ runner.os }}-chromium
+#
+#       - name: Setup .NET
+#         uses: actions/setup-dotnet@v4
+#         with:
+#           dotnet-version: '8.x'
+#
+#       - name: Build and install Playwright
+#         run: |
+#           dotnet build
+#           pwsh bin/Debug/net8.0/playwright.ps1 install chromium
+#
+#       - name: Run notifier
+#         run: dotnet run
+#
+#       - name: Commit and push updated chapter_log.txt
+#         env:
+#           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+#         run: |
+#           git config user.name "github-actions[bot]"
+#           git config user.email "github-actions[bot]@users.noreply.github.com"
+#           git add chapter_log.txt
+#           git diff --cached --quiet || git commit -m "Update chapter_log.txt [skip ci]"
+#           git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
+#           git push origin HEAD:master
